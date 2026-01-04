@@ -73,3 +73,17 @@ export const loginUser = async (req: Request, res: Response) => {
       .json({ message: "Something went wrong when logging in" });
   }
 };
+
+export const logoutUser = async (req: Request, res: Response) => {
+  req.session.destroy((err: any) => {
+    if (err) {
+      console.log(err);
+      return res
+        .status(500)
+        .json({ message: "Something went wrong when logging out" });
+    }
+  });
+  return res.status(500).json({ message: "Logout Successfull" });
+};
+
+//
