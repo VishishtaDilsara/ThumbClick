@@ -24,7 +24,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
     //Setting User Data in Session
     req.session.isLoggedIn = true;
-    req.session.useId = newUser._id;
+    req.session.userId = newUser._id;
     return res.status(200).json({
       message: "User registered successfully",
       user: {
@@ -57,7 +57,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     //Setting User Data in Session
     req.session.isLoggedIn = true;
-    req.session.useId = user._id;
+    req.session.userId = user._id;
     return res.status(200).json({
       message: "Login Successfull",
       user: {
@@ -66,7 +66,7 @@ export const loginUser = async (req: Request, res: Response) => {
         email: user.email,
       },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.log(err);
     return res
       .status(500)
@@ -86,4 +86,18 @@ export const logoutUser = async (req: Request, res: Response) => {
   return res.status(500).json({ message: "Logout Successfull" });
 };
 
-//
+//Controller for user verify
+export const verifyUser = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.session;
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    } else {
+      return res.status(200).json({ user });
+    }
+  } catch (err: any) {
+    console.log(err);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
