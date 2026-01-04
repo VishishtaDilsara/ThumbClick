@@ -6,7 +6,7 @@ import {
 
 const ThumbnailRouter = express.Router();
 
-ThumbnailRouter.post("/", generateThumbnail);
+ThumbnailRouter.post("/generate", generateThumbnail);
 ThumbnailRouter.delete("/delete/:id", deleteThumbnail);
 
 export default ThumbnailRouter;
