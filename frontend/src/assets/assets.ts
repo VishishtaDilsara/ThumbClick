@@ -253,7 +253,7 @@ export const yt_html = `
                         <a class="flex items-center gap-4 px-3 py-2 rounded-lg hover:bg-yt2"><i data-lucide="thumbs-up"></i> Liked videos</a>
                         <hr class="border-ytBorder" />
                         <p class="px-3 text-xs text-gray-400 uppercase">Subscriptions</p>
-                        <a target="_blank" href="https://www.youtube.com/@GreatStackDev?sub_confirmation=1" class="flex items-center gap-4 px-3 py-2 rounded-lg hover:bg-yt2"> <img src="https://greatstack.dev/favicon.ico" class="rounded-full size-7" /> GreatStack </a>
+                        <a target="_blank"  class="flex items-center gap-4 px-3 py-2 rounded-lg hover:bg-yt2"> <img src="/assets/logo3.png" class="rounded-full size-7" /> ThumbClick </a>
                         
                         <a class="flex items-center gap-4 px-3 py-2 rounded-lg hover:bg-yt2"> <img src="https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2023.ico" class="rounded-full size-7" /> Netflix </a>
                         <a class="flex items-center gap-4 px-3 py-2 rounded-lg hover:bg-yt2"> <img src="https://images.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" class="rounded-full size-7" /> Google </a>
@@ -314,10 +314,10 @@ export const yt_html = `
                         <article>
                             <img src="%%THUMBNAIL_URL%%" class="rounded-xl aspect-video object-top" />
                             <div class="flex gap-3 mt-3">
-                                <img src="https://i.pravatar.cc/36?4" class="rounded-full h-9 w-9" />
+                                <img src="/assets/logo3.png" class="rounded-full h-9 w-9" />
                                 <div>
                                     <h3 class="font-semibold line-clamp-2">%%TITLE%%</h3>
-                                    <p class="text-sm text-gray-400">Neo TY Channel</p>
+                                    <p class="text-sm text-gray-400">Thumb Click</p>
                                     <p class="text-sm text-gray-400">2.3M views • 12 days ago</p>
                                 </div>
                             </div>
