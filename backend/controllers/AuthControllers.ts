@@ -83,7 +83,7 @@ export const logoutUser = async (req: Request, res: Response) => {
         .json({ message: "Something went wrong when logging out" });
     }
   });
-  return res.status(500).json({ message: "Logout Successfull" });
+  return res.status(200).json({ message: "Logout Successfull" });
 };
 
 //Controller for user verify
