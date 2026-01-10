@@ -19,21 +19,21 @@ await connectDB();
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:8080",
-      "http://localhost:3000",
-      "https://thumbclick.vercel.app",
-    ],
+    origin: ["http://localhost:8080", "https://thumbclick.vercel.app"],
     credentials: true,
   })
 );
 
-app.set("trust proxy", 1);
+// optional but can help preflights
+app.options("*", cors());
 
 app.use(
   session({
+    name: "thumbclick.sid",
     secret: process.env.SESSION_SECRET as string,
     resave: false,
     saveUninitialized: false,
@@ -41,10 +41,10 @@ app.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
       path: "/",
-    }, //7 Days
+    },
     store: MongoStore.create({
       mongoUrl: process.env.MONGODB_URI as string,
       collectionName: "sessions",
