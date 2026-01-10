@@ -1,13 +1,28 @@
 import { MenuIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
   const { isLoggedin, user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const goToContact = () => {
+    setIsOpen(false);
+
+    // If already on homepage, just scroll
+    if (location.pathname === "/") {
+      const el = document.getElementById("contact");
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    // Otherwise, navigate to homepage and tell it what to scroll to
+    navigate("/", { state: { scrollTo: "contact" } });
+  };
 
   return (
     <>
@@ -29,9 +44,11 @@ export default function Navbar() {
           <Link to="/" className="hover:text-pink-300 transition">
             Home
           </Link>
+
           <Link to="/generate" className="hover:text-pink-300 transition">
             Generate
           </Link>
+
           {isLoggedin ? (
             <Link
               to="/my-generation"
@@ -45,10 +62,16 @@ export default function Navbar() {
             </Link>
           )}
 
-          <Link to="#contact" className="hover:text-pink-300 transition">
+          {/* ✅ FIXED */}
+          <button
+            type="button"
+            onClick={goToContact}
+            className="hover:text-pink-300 transition"
+          >
             Contact Us
-          </Link>
+          </button>
         </div>
+
         <div className="flex items-center gap-2">
           {isLoggedin ? (
             <div className="relative group">
@@ -72,12 +95,14 @@ export default function Navbar() {
               Get Started
             </button>
           )}
+
           <button onClick={() => setIsOpen(true)} className="md:hidden">
             <MenuIcon size={26} className="active:scale-90 transition" />
           </button>
         </div>
       </motion.nav>
 
+      {/* MOBILE MENU */}
       <div
         className={`fixed inset-0 z-100 bg-black/40 backdrop-blur flex flex-col items-center justify-center text-lg gap-8 md:hidden transition-transform duration-400 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
@@ -90,6 +115,7 @@ export default function Navbar() {
         <Link onClick={() => setIsOpen(false)} to="/generate">
           Generate
         </Link>
+
         {isLoggedin ? (
           <Link onClick={() => setIsOpen(false)} to="/my-generation">
             My Generations
@@ -100,9 +126,11 @@ export default function Navbar() {
           </Link>
         )}
 
-        <Link onClick={() => setIsOpen(false)} to="#contact">
+        {/* ✅ FIXED */}
+        <button type="button" onClick={goToContact}>
           Contact Us
-        </Link>
+        </button>
+
         {isLoggedin ? (
           <button
             onClick={() => {
