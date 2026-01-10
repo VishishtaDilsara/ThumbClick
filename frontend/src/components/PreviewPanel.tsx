@@ -16,9 +16,19 @@ const PreviewPanel = ({
     "9:16": "aspect-[9/16]",
   } as Record<AspectRatio, string>;
 
-  const onDownload = () => {
+  const onDownload = async () => {
     if (!thumbnail?.image_url) return;
-    window.open(thumbnail.image_url, "_blank");
+
+    const url = new URL(thumbnail.image_url);
+
+    url.pathname = url.pathname.replace("/upload/", "/upload/fl_attachment/");
+
+    const link = document.createElement("a");
+    link.href = url.toString();
+    link.download = `${thumbnail.title || "thumbnail"}.jpg`; // optional
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   return (
