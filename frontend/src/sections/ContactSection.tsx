@@ -1,9 +1,41 @@
 "use client";
+import axios from "axios";
 import SectionTitle from "../components/SectionTitle";
 import { ArrowRightIcon, MailIcon, UserIcon } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function ContactSection() {
+  const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [sending, setSending] = useState(false);
+
+  async function sendMessage() {
+    if (!name || !email || !message) {
+      toast.error("Please fill all the fields");
+      return;
+    }
+    setSending(true);
+    axios
+      .post(import.meta.env.VITE_BASE_URL + "/api/user/send-message", {
+        name: name,
+        email: email,
+        message: message,
+      })
+      .then((res) => {
+        toast.success("Message sent successfully");
+        setEmail("");
+        setName("");
+        setMessage("");
+        setSending(false);
+      })
+      .catch((err) => {
+        toast.error("Error sending message");
+        console.log(err);
+      });
+  }
   return (
     <section id="contact">
       <div className="px-4 md:px-16 lg:px-24 xl:px-32">
@@ -33,8 +65,12 @@ export default function ContactSection() {
               <input
                 name="name"
                 type="text"
+                value={name}
                 placeholder="Enter your name"
                 className="w-full p-3 outline-none"
+                onChange={(e) => {
+                  setName(e.target.value);
+                }}
               />
             </div>
           </motion.div>
@@ -56,8 +92,12 @@ export default function ContactSection() {
               <input
                 name="email"
                 type="email"
+                value={email}
                 placeholder="Enter your email"
                 className="w-full p-3 outline-none"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                }}
               />
             </div>
           </motion.div>
@@ -79,13 +119,19 @@ export default function ContactSection() {
               name="message"
               rows={8}
               placeholder="Enter your message"
+              value={message}
               className="focus:border-pink-500 resize-none w-full p-3 outline-none rounded-lg border border-slate-700"
+              onChange={(e) => {
+                setMessage(e.target.value);
+              }}
             />
           </motion.div>
 
           <motion.button
+            onClick={sendMessage}
             type="submit"
-            className="w-max flex items-center gap-2 bg-pink-600 hover:bg-pink-700 text-white px-10 py-3 rounded-full"
+            disabled={sending}
+            className="w-max flex items-center gap-2 bg-pink-600 hover:bg-pink-700 disabled:opacity-70 disabled:cursor-not-allowed text-white px-10 py-3 rounded-full"
             initial={{ y: 150, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
@@ -96,8 +142,14 @@ export default function ContactSection() {
               mass: 1,
             }}
           >
-            Submit
-            <ArrowRightIcon className="size-5" />
+            {sending ? (
+              "Submitting..."
+            ) : (
+              <>
+                Submit
+                <ArrowRightIcon className="size-5" />
+              </>
+            )}
           </motion.button>
         </form>
       </div>
