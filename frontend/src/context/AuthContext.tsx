@@ -76,7 +76,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log(err);
     }
   };
-  const logout = async () => {};
+  const logout = async () => {
+    try {
+      const { data } = await api.post("/api/auth/logout");
+      setUser(null);
+      setIsLoggedIn(false);
+      toast.success(data.message);
+    } catch (err) {
+      console.log(err);
+    }
+  };
   const fetchUser = async () => {};
 
   useEffect(() => {
