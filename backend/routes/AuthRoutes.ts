@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  findUserByEmail,
   loginUser,
   logoutUser,
   registerUser,
@@ -13,5 +14,6 @@ AuthRouter.post("/register", registerUser);
 AuthRouter.post("/login", loginUser);
 AuthRouter.get("/verify", protect, verifyUser);
 AuthRouter.post("/logout", protect, logoutUser);
+AuthRouter.post("/finduser", findUserByEmail);
 
 export default AuthRouter;

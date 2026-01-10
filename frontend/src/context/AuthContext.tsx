@@ -45,20 +45,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         toast.error("Please fill all the fields");
         return;
       }
-      const { data } = await api.post("/api/auth/register", {
-        name,
-        email,
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Find user
+      const { data: findUserData } = await api.post("/api/auth/finduser", {
+        email: normalizedEmail,
+      });
+
+      if (findUserData?.exists) {
+        toast.error("An account with this email already exists");
+        return;
+      }
+
+      // Register
+      const { data: registerData } = await api.post("/api/auth/register", {
+        name: name.trim(),
+        email: normalizedEmail,
         password,
       });
-      if (data.user) {
-        setUser(data.user);
+
+      if (registerData?.user) {
+        setUser(registerData.user);
         setIsLoggedIn(true);
       }
-      toast.success(data.message);
-    } catch (err) {
+
+      toast.success("Account created successfully");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Signup failed");
       console.log(err);
     }
   };
+
   const login = async ({
     email,
     password,

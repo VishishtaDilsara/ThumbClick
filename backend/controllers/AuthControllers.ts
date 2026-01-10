@@ -101,3 +101,22 @@ export const verifyUser = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+export const findUserByEmail = async (req: Request, res: Response) => {
+  try {
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email }).select("_id");
+
+    return res.status(200).json({ exists: !!user });
+  } catch (err: any) {
+    console.log(err);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+};
