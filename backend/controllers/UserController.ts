@@ -5,8 +5,8 @@ import Thumbnail from "../models/Thumbnail.js";
 export const getUserThumbnails = async (req: Request, res: Response) => {
   try {
     const { userId } = req.session;
-    const thumbnail = await Thumbnail.find({ userId }).sort({ createdAt: -1 });
-    res.status(200).json({ thumbnail });
+    const thumbnails = await Thumbnail.find({ userId }).sort({ createdAt: -1 });
+    res.status(200).json({ thumbnails });
   } catch (err: any) {
     console.log(err);
     return res.status(500).json({ message: "Something went wrong" });

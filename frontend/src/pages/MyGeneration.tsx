@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import SoftBackdrop from "../components/SoftBackdrop";
-import { dummyThumbnails, type IThumbnail } from "../assets/assets";
+import { type IThumbnail } from "../assets/assets";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowUpRightIcon, DownloadIcon, TrashIcon } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import api from "../configs/api";
+import toast from "react-hot-toast";
 
 const MyGeneration = () => {
+  const { isLoggedin } = useAuth();
   const navigate = useNavigate();
 
   const aspectRatioClassMap: Record<string, string> = {
@@ -17,21 +21,55 @@ const MyGeneration = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchThumbnails = async () => {
-    setThumbnails(dummyThumbnails as unknown as IThumbnail[]);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const { data } = await api.get("/api/user/thumbnails");
+      setThumbnails(data.thumbnails || []);
+    } catch (err: any) {
+      console.log(err);
+      toast.error(err?.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDownload = (image_url: string) => {
-    window.open(image_url, "_blank");
+  const handleDownload = (image_url: string, title?: string) => {
+    if (!image_url) return;
+
+    const url = new URL(image_url);
+
+    // Insert Cloudinary download flag correctly
+    url.pathname = url.pathname.replace("/upload/", "/upload/fl_attachment/");
+
+    const link = document.createElement("a");
+    link.href = url.toString();
+    link.download = `${title || "thumbnail"}.jpg`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDelete = async (id: string) => {
-    console.log(id);
+    try {
+      const confirm = window.confirm(
+        "Are you sure you want to delete this thumbnail?"
+      );
+      if (!confirm) return;
+      const { data } = await api.delete(`/api/thumbnail/delete/${id}`);
+      toast.success(data.message);
+      setThumbnails(thumbnails.filter((t) => t._id !== id));
+    } catch (err: any) {
+      console.log(err);
+      toast.error(err?.response?.data?.message || err.message);
+    }
   };
 
   useEffect(() => {
-    fetchThumbnails();
-  }, []);
+    if (isLoggedin) {
+      fetchThumbnails();
+    }
+  }, [isLoggedin]);
 
   return (
     <>
