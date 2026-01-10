@@ -106,7 +106,7 @@ export default function FeaturesSection() {
               capture attention
             </p>
             <a
-              href="https://prebuiltui.com"
+              href="/generate"
               className="group flex items-center gap-2 mt-4 text-pink-600 hover:text-pink-700 transition"
             >
               Start generation free
