@@ -41,6 +41,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     password: string;
   }) => {
     try {
+      if (!name || !email || !password) {
+        toast.error("Please fill all the fields");
+        return;
+      }
       const { data } = await api.post("/api/auth/register", {
         name,
         email,
@@ -63,6 +67,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     password: string;
   }) => {
     try {
+      if (!email || !password) {
+        toast.error("Please fill all the fields");
+        return;
+      }
       const { data } = await api.post("/api/auth/login", {
         email,
         password,
@@ -72,7 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsLoggedIn(true);
       }
       toast.success(data.message);
-    } catch (err) {
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err.message);
       console.log(err);
     }
   };
