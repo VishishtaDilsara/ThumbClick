@@ -79,13 +79,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       const { data } = await api.post("/api/auth/logout");
+      toast.success(data?.message || "Logged out");
+    } catch (err: any) {
+      // even if server fails, clear local state
+      toast.error(err?.response?.data?.message || "Logout failed");
+    } finally {
       setUser(null);
       setIsLoggedIn(false);
-      toast.success(data.message);
-    } catch (err) {
-      console.log(err);
     }
   };
+
   const fetchUser = async () => {
     try {
       const { data } = await api.get("/api/auth/verify");

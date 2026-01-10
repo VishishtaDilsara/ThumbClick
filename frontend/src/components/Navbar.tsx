@@ -109,7 +109,10 @@ export default function Navbar() {
               </button>
               <div className="absolute hidden group-hover:block top-6 right-0 pt-4">
                 <button
-                  onClick={() => logout()}
+                  onClick={async () => {
+                    await logout();
+                    navigate("/"); // optional but helps UX
+                  }}
                   className="bg-white/20 border-2 border-white/10 px-5 py-1.5 rounded"
                 >
                   Logout
@@ -161,9 +164,10 @@ export default function Navbar() {
 
         {isLoggedin ? (
           <button
-            onClick={() => {
+            onClick={async () => {
               setIsOpen(false);
-              logout();
+              await logout();
+              navigate("/"); // optional
             }}
           >
             Logout
