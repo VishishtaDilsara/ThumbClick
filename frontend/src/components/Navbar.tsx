@@ -13,41 +13,35 @@ export default function Navbar() {
   const goToContact = () => {
     setIsOpen(false);
 
-    // If already on homepage, just scroll
     if (location.pathname === "/") {
       const el = document.getElementById("contact");
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
-    // Otherwise, navigate to homepage and tell it what to scroll to
     navigate("/", { state: { scrollTo: "contact" } });
   };
 
   const goToAbout = () => {
     setIsOpen(false);
 
-    // If already on homepage, just scroll
     if (location.pathname === "/") {
       const el = document.getElementById("features");
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
-    // Otherwise, navigate to homepage and tell it what to scroll to
     navigate("/", { state: { scrollTo: "features" } });
   };
 
   const goHome = () => {
     setIsOpen(false);
 
-    // If already on homepage -> scroll to top
     if (location.pathname === "/") {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
-    // Otherwise navigate home and tell HomePage to scroll to top
     navigate("/", { state: { scrollTo: "top" } });
   };
 
