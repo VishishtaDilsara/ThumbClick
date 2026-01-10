@@ -6,36 +6,25 @@ import bcrypt from "bcrypt";
 export const registerUser = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
-
-    // Check existing user
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    //Find user by email
+    const user = await User.findOne({ email });
+    if (user) {
       return res.status(400).json({ message: "User already exists" });
     }
-
-    // Hash password
+    //Encrypt the Password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
-    const newUser = await User.create({
+    //Create new user
+    const newUser = new User({
       name,
       email,
       password: hashedPassword,
     });
+    await newUser.save();
 
-    // ✅ SET SESSION
+    //Setting User Data in Session
     req.session.isLoggedIn = true;
-    req.session.userId = newUser._id.toString();
-
-    // ✅ FORCE SAVE SESSION (CRITICAL)
-    await new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
+    req.session.userId = newUser._id;
     return res.status(200).json({
       message: "User registered successfully",
       user: {
@@ -44,55 +33,44 @@ export const registerUser = async (req: Request, res: Response) => {
         email: newUser.email,
       },
     });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      message: "Something went wrong when registering",
-    });
+  } catch (err: any) {
+    console.log(err);
+    return res
+      .status(500)
+      .json({ message: "Something went wrong when registering" });
   }
 };
 
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-
-    // Find user
+    //Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid Email or Password" });
     }
 
-    // Compare password
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid Email or Password" });
     }
 
-    // ✅ SET SESSION
+    //Setting User Data in Session
     req.session.isLoggedIn = true;
-    req.session.userId = user._id.toString();
-
-    // ✅ FORCE SAVE SESSION (CRITICAL)
-    await new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
+    req.session.userId = user._id;
     return res.status(200).json({
-      message: "Login successful",
+      message: "Login Successfull",
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
       },
     });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      message: "Something went wrong when logging in",
-    });
+  } catch (err: any) {
+    console.log(err);
+    return res
+      .status(500)
+      .json({ message: "Something went wrong when logging in" });
   }
 };
 
