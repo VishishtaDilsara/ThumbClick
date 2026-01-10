@@ -15,8 +15,12 @@ export default function HomePage() {
     if (!target) return;
 
     const t = setTimeout(() => {
-      const el = document.getElementById(target);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (target === "top") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        const el = document.getElementById(target);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
 
       window.history.replaceState({}, document.title);
     }, 100);

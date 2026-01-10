@@ -24,6 +24,33 @@ export default function Navbar() {
     navigate("/", { state: { scrollTo: "contact" } });
   };
 
+  const goToAbout = () => {
+    setIsOpen(false);
+
+    // If already on homepage, just scroll
+    if (location.pathname === "/") {
+      const el = document.getElementById("features");
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    // Otherwise, navigate to homepage and tell it what to scroll to
+    navigate("/", { state: { scrollTo: "features" } });
+  };
+
+  const goHome = () => {
+    setIsOpen(false);
+
+    // If already on homepage -> scroll to top
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // Otherwise navigate home and tell HomePage to scroll to top
+    navigate("/", { state: { scrollTo: "top" } });
+  };
+
   return (
     <>
       <motion.nav
@@ -41,9 +68,13 @@ export default function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-8 transition duration-500">
-          <Link to="/" className="hover:text-pink-300 transition">
+          <button
+            type="button"
+            onClick={goHome}
+            className="hover:text-pink-300 transition"
+          >
             Home
-          </Link>
+          </button>
 
           <Link to="/generate" className="hover:text-pink-300 transition">
             Generate
@@ -57,9 +88,13 @@ export default function Navbar() {
               My Generations
             </Link>
           ) : (
-            <Link to="#" className="hover:text-pink-300 transition">
+            <button
+              type="button"
+              onClick={goToAbout}
+              className="hover:text-pink-300 transition"
+            >
               About
-            </Link>
+            </button>
           )}
 
           {/* ✅ FIXED */}
@@ -108,9 +143,9 @@ export default function Navbar() {
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Link onClick={() => setIsOpen(false)} to="/">
+        <button type="button" onClick={goHome}>
           Home
-        </Link>
+        </button>
 
         <Link onClick={() => setIsOpen(false)} to="/generate">
           Generate
@@ -121,12 +156,11 @@ export default function Navbar() {
             My Generations
           </Link>
         ) : (
-          <Link onClick={() => setIsOpen(false)} to="#">
+          <button type="button" onClick={goToAbout}>
             About
-          </Link>
+          </button>
         )}
 
-        {/* ✅ FIXED */}
         <button type="button" onClick={goToContact}>
           Contact Us
         </button>
