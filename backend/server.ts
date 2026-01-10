@@ -19,79 +19,49 @@ await connectDB();
 
 const app = express();
 
-/** ===== CORS (IMPORTANT) ===== */
-const allowedOrigins = [
-  "http://localhost:8080",
-  "http://localhost:3000",
-  "https://thumbclick.vercel.app",
-];
+app.use(
+  cors({
+    origin: [
+      "http://localhost:8080",
+      "http://localhost:3000",
+      "https://thumbclick.vercel.app",
+    ],
+    credentials: true,
+  })
+);
 
-// If you also use preview deployments, you can optionally allow *.vercel.app
-// (better is to add your exact preview URLs)
-// const allowVercelWildcard = (origin: string) => origin.endsWith(".vercel.app");
-
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    // allow non-browser clients (Postman, server-to-server) where origin is undefined
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-
-app.use(cors(corsOptions));
-// ✅ this is what fixes "Response Headers (0)" / preflight failures
-app.options("*", cors(corsOptions));
-
-/** ===== Trust proxy (Vercel / reverse proxies) ===== */
 app.set("trust proxy", 1);
-
-/** ===== Body parser ===== */
-app.use(express.json());
-
-/** ===== Session ===== */
-const isProd = process.env.NODE_ENV === "production";
 
 app.use(
   session({
-    name: "sid", // optional cookie name (you can remove this line)
     secret: process.env.SESSION_SECRET as string,
     resave: false,
     saveUninitialized: false,
+    proxy: true,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
+    }, //7 Days
     store: MongoStore.create({
       mongoUrl: process.env.MONGODB_URI as string,
       collectionName: "sessions",
     }),
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      httpOnly: true,
-
-      // ✅ Cross-site cookie requirements for Vercel FE -> Vercel/other BE:
-      // If frontend and backend are different origins, you MUST use:
-      // SameSite=None + Secure=true
-      sameSite: isProd ? "none" : "lax",
-      secure: isProd, // in production must be true (HTTPS)
-      path: "/",
-    },
   })
 );
 
-/** ===== Health route ===== */
+app.use(express.json());
+
 app.get("/", (req: Request, res: Response) => {
   res.send("Server is Live!");
 });
 
-/** ===== Routes ===== */
 app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 app.use("/api/user", UserRouter);
 
-/** ===== Start ===== */
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
