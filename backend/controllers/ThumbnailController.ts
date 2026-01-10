@@ -1,13 +1,6 @@
 import { Request, Response } from "express";
 import Thumbnail from "../models/Thumbnail.js";
-import {
-  GenerateContentConfig,
-  HarmBlockThreshold,
-  HarmCategory,
-} from "@google/genai";
-import ai from "../configs/ai.js";
-import path from "node:path";
-import fs from "node:fs";
+import axios from "axios";
 import { v2 as cloudinary } from "cloudinary";
 
 const stylePrompts = {
@@ -41,17 +34,96 @@ const colorSchemeDescriptions = {
     "soft pastel colors, low saturation, gentle tones, calm and friendly aesthetic",
 };
 
+/** Uploads a Buffer to Cloudinary without writing to disk */
+function uploadToCloudinary(
+  buffer: Buffer,
+  aspectRatio?: string
+): Promise<{ url: string }> {
+  const transformations = getCloudinaryTransform(aspectRatio);
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "image",
+        transformation: transformations,
+      },
+      (error, result) => {
+        if (error || !result) {
+          return reject(error ?? new Error("Upload failed"));
+        }
+        resolve({ url: result.secure_url || result.url });
+      }
+    );
+
+    stream.end(buffer);
+  });
+}
+
+function getCloudinaryTransform(aspectRatio?: string) {
+  if (aspectRatio === "16:9") {
+    return [{ aspect_ratio: "16:9", crop: "fill", gravity: "center" }];
+  }
+
+  if (aspectRatio === "9:16") {
+    return [{ aspect_ratio: "9:16", crop: "fill", gravity: "center" }];
+  }
+
+  // 1:1 → no crop
+  return [];
+}
+
+/** Extract base64 or URL from many possible a4a response shapes */
+function extractImageFromA4AResponse(data: any): {
+  buffer?: Buffer;
+  url?: string;
+} {
+  // Common base64 fields
+  const base64 =
+    data?.image_base64 ??
+    data?.base64 ??
+    data?.data?.[0]?.b64_json ??
+    data?.output?.[0]?.base64 ??
+    data?.result?.image_base64;
+
+  if (typeof base64 === "string" && base64.length > 50) {
+    return { buffer: Buffer.from(base64, "base64") };
+  }
+
+  // Common URL fields
+  const url =
+    data?.image_url ??
+    data?.url ??
+    data?.data?.[0]?.url ??
+    data?.output?.[0]?.url ??
+    data?.result?.image_url;
+
+  if (typeof url === "string" && url.startsWith("http")) {
+    return { url };
+  }
+
+  return {};
+}
+
 export const generateThumbnail = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.session;
+    const { userId } = req.session as any;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const {
       title,
       prompt: user_prompt,
       style,
       aspect_ratio,
       color_scheme,
-      text_overlay,
+      text_overlay, // (kept for DB, you can also inject into prompt if you want)
     } = req.body;
+
+    if (!title || !style) {
+      return res.status(400).json({ message: "title and style are required" });
+    }
 
     const thumbnail = await Thumbnail.create({
       userId,
@@ -65,81 +137,94 @@ export const generateThumbnail = async (req: Request, res: Response) => {
       isGenerating: true,
     });
 
-    const model = "gemini-3-pro-image-preview";
-    const generationConfig: GenerateContentConfig = {
-      maxOutputTokens: 32768,
-      temperature: 1,
-      topP: 0.95,
-      responseModalities: ["IMAGE"],
-      imageConfig: {
-        aspectRatio: aspect_ratio || "16:9",
-        imageSize: "1K",
-      },
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.OFF,
-        },
-      ],
-    };
+    // Build prompt
     let prompt = `Create a ${
-      stylePrompts[style as keyof typeof stylePrompts]
-    } for: "${title}"`;
+      stylePrompts[style as keyof typeof stylePrompts] ??
+      stylePrompts["Bold & Graphic"]
+    } with title: "${title}". `;
+
     if (color_scheme) {
       prompt += `Use a ${
         colorSchemeDescriptions[
           color_scheme as keyof typeof colorSchemeDescriptions
-        ]
-      } color scheme.`;
+        ] ?? ""
+      } color scheme. `;
     }
+
     if (user_prompt) {
-      prompt += `Additional details: "${user_prompt}".`;
+      prompt += `Additional details: "${user_prompt}". `;
     }
-    prompt += `The thumbnail should be ${aspect_ratio}, visually stunning, and designed to maximize click-through rate. Make it bold, prefessional, and impossible to ignore`;
 
-    //Generate Image using AI model
-    const response: any = await ai.models.generateContent({
-      model,
-      contents: [prompt],
-      config: generationConfig,
-    });
-
-    //Check if the response is valid
-    if (!response?.candidates?.[0]?.content?.parts) {
-      throw new Error("Unexpected response");
+    if (text_overlay) {
+      prompt += `Include this text overlay (make it readable, bold): "${text_overlay}". `;
     }
-    const parts = response.candidates[0].content.parts;
+
+    prompt += `The thumbnail should be ${
+      aspect_ratio || "16:9"
+    }, visually stunning, and designed to maximize click-through rate. Make it bold, professional, and impossible to ignore.`;
+
+    // ✅ a4a config
+    const A4A_BASE_URL = process.env.A4A_BASE_URL;
+    const A4A_API_KEY = process.env.A4A_API_KEY;
+    const A4A_GENERATE_ENDPOINT = process.env.A4A_GENERATE_ENDPOINT;
+    const A4A_MODEL = process.env.A4A_MODEL || "provider-4/imagen-3.5";
+
+    if (!A4A_BASE_URL || !A4A_API_KEY || !A4A_GENERATE_ENDPOINT) {
+      thumbnail.isGenerating = false;
+      await thumbnail.save();
+      return res.status(500).json({
+        message:
+          "Missing A4A env vars. Set A4A_BASE_URL, A4A_API_KEY, A4A_GENERATE_ENDPOINT.",
+      });
+    }
+
+    const a4aResp = await axios.post(
+      `${A4A_BASE_URL}${A4A_GENERATE_ENDPOINT}`,
+      {
+        model: "provider-4/flux-schnell",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        response_format: "url",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${A4A_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 120_000,
+      }
+    );
+
+    const { buffer, url } = extractImageFromA4AResponse(a4aResp.data);
 
     let finalBuffer: Buffer | null = null;
-    for (const part of parts) {
-      if (part.inlineData) {
-        finalBuffer = Buffer.from(part.inlineData.data, "base64");
-      }
+
+    if (buffer) {
+      finalBuffer = buffer;
+    } else if (url) {
+      // Download image bytes if a4a returns a URL
+      const img = await axios.get(url, {
+        responseType: "arraybuffer",
+        timeout: 120_000,
+      });
+      finalBuffer = Buffer.from(img.data);
     }
-    const filename = `final-output-${Date.now()}.png`;
-    const filePath = path.join("images", filename);
 
-    //Create the images directory if it doesn't exist
-    fs.mkdirSync("images", { recursive: true });
+    if (!finalBuffer) {
+      thumbnail.isGenerating = false;
+      await thumbnail.save();
+      console.error("A4A raw response:", a4aResp.data);
+      return res.status(500).json({
+        message:
+          "a4a did not return an image (base64 or URL). Check endpoint/payload/response.",
+      });
+    }
 
-    //Save the image to the images directory
-    fs.writeFileSync(filePath, finalBuffer!);
+    // Upload to Cloudinary from memory (no local file)
+    const transformations = getCloudinaryTransform(aspect_ratio);
 
-    const uploadResult = await cloudinary.uploader.upload(filePath, {
-      resource_type: "image",
-    });
+    const uploadResult = await uploadToCloudinary(finalBuffer, aspect_ratio);
 
     thumbnail.image_url = uploadResult.url;
     thumbnail.isGenerating = false;
@@ -149,25 +234,29 @@ export const generateThumbnail = async (req: Request, res: Response) => {
       message: "Thumbnail generated successfully",
       thumbnail,
     });
-
-    //remove image file from disk
-    fs.unlinkSync(filePath);
   } catch (err: any) {
-    console.log(err);
-    return res.status(500).json({ message: "Something went wrong" });
+    console.error(err?.response?.data || err);
+    return res.status(500).json({
+      message: "Something went wrong",
+      error: err?.response?.data || err?.message || String(err),
+    });
   }
 };
 
 export const deleteThumbnail = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { userId } = req.session;
+    const { userId } = req.session as any;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     await Thumbnail.findByIdAndDelete({ _id: id, userId });
 
     return res.status(200).json({ message: "Thumbnail deleted successfully" });
   } catch (err: any) {
-    console.log(err);
+    console.error(err);
     return res.status(500).json({ message: "Something went wrong" });
   }
 };
