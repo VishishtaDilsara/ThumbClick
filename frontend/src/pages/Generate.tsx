@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   colorSchemes,
-  dummyThumbnails,
   type AspectRatio,
   type IThumbnail,
   type ThumbnailStyle,
@@ -12,9 +11,16 @@ import AspectRatioSelector from "../components/AspectRatioSelector";
 import StyleSelector from "../components/StyleSelector";
 import ColorSchemeSelector from "../components/ColorSchemeSelector";
 import PreviewPanel from "../components/PreviewPanel";
+import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
+import api from "../configs/api";
 
 const Generate = () => {
   const { id } = useParams();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { isLoggedin } = useAuth();
+
   const [title, setTitle] = useState("");
   const [additionalDetails, setAdditionalDetails] = useState("");
   const [thumbnail, setThumbnail] = useState<IThumbnail | null>(null);
@@ -28,28 +34,84 @@ const Generate = () => {
 
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
 
-  const handleGenerate = async () => {};
+  const handleGenerate = async () => {
+    if (!isLoggedin)
+      return toast.error("You must be logged in to generate a thumbnail");
+    if (!title.trim()) return toast.error("Please enter a title");
+
+    setLoading(true);
+    try {
+      const api_payload = {
+        title,
+        prompt: additionalDetails,
+        style,
+        aspect_ratio: aspectRatio,
+        color_scheme: colorSchemeId,
+        text_overlay: true,
+      };
+
+      const { data } = await api.post("/api/thumbnail/generate", api_payload);
+
+      if (data?.thumbnail?._id) {
+        toast.success(data.message);
+        navigate(`/generate/${data.thumbnail._id}`);
+      } else {
+        toast.error("No thumbnail returned");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err.message);
+      setLoading(false); // only stop loading if request failed
+    }
+  };
 
   const fetchThumbnail = async () => {
-    if (id) {
-      const thumbnail: any = dummyThumbnails.find(
-        (thumbnail) => thumbnail._id === id
-      );
-      setThumbnail(thumbnail);
-      setAdditionalDetails(thumbnail.user_prompt);
-      setTitle(thumbnail.title);
-      setColorSchemeId(thumbnail.color_scheme);
-      setAspectRatio(thumbnail.aspect_ratio);
-      setStyle(thumbnail.style);
+    try {
+      const { data } = await api.get(`/api/user/thumbnail/${id}`);
+      console.log("GET thumbnail response:", data);
+      const t = (data?.thumbnail ?? data) as IThumbnail;
+
+      if (!t || !t._id) {
+        setThumbnail(null);
+        setLoading(false);
+        return;
+      }
+
+      // update thumbnail state
+      setThumbnail(t as IThumbnail);
+
+      // ✅ loading should depend ONLY on backend state
+      const stillGenerating = t.isGenerating === true && !t.image_url;
+      setLoading(stillGenerating);
+
+      setAdditionalDetails(t.user_prompt ?? "");
+      setTitle(t.title ?? "");
+      setColorSchemeId(t.color_scheme ?? colorSchemes[0].id);
+      setAspectRatio((t.aspect_ratio as AspectRatio) ?? "16:9");
+      setStyle((t.style as ThumbnailStyle) ?? "Bold & Graphic");
+      console.log("thumb:", t.isGenerating, t.image_url);
+    } catch (err: any) {
+      console.log(err);
+      toast.error(err?.response?.data?.message || err.message);
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (id) {
-      fetchThumbnail();
+    if (!isLoggedin || !id) return;
+
+    fetchThumbnail();
+
+    if (loading) {
+      const interval = setInterval(fetchThumbnail, 5000);
+      return () => clearInterval(interval);
     }
-  });
+  }, [id, loading, isLoggedin]);
+
+  useEffect(() => {
+    if (!id && thumbnail) {
+      setThumbnail(null);
+    }
+  }, [pathname]);
 
   return (
     <>
@@ -87,7 +149,7 @@ const Generate = () => {
                     />
                     <div className="flex justify-end">
                       <span className="text-xs text-zinc-400">
-                        {title.length}/100
+                        {title?.length ?? 0}/100
                       </span>
                     </div>
                   </div>

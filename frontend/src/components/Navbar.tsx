@@ -41,14 +41,12 @@ export default function Navbar() {
             </Link>
           ) : (
             <Link to="#" className="hover:text-pink-300 transition">
-              Contact Us
+              About
             </Link>
           )}
-          <Link to="/my-generation" className="hover:text-pink-300 transition">
-            My Generations
-          </Link>
+
           <Link to="#" className="hover:text-pink-300 transition">
-            Contact
+            Contact Us
           </Link>
         </div>
         <div className="flex items-center gap-2">
@@ -74,11 +72,10 @@ export default function Navbar() {
               Get Started
             </button>
           )}
+          <button onClick={() => setIsOpen(true)} className="md:hidden">
+            <MenuIcon size={26} className="active:scale-90 transition" />
+          </button>
         </div>
-
-        <button onClick={() => setIsOpen(true)} className="md:hidden">
-          <MenuIcon size={26} className="active:scale-90 transition" />
-        </button>
       </motion.nav>
 
       <div
@@ -99,7 +96,7 @@ export default function Navbar() {
           </Link>
         ) : (
           <Link onClick={() => setIsOpen(false)} to="#">
-            About Us
+            About
           </Link>
         )}
 

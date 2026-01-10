@@ -20,7 +20,7 @@ export const getThumbnailbyId = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const thumbnail = await Thumbnail.findOne({ userId, _id: id });
-    res.json(thumbnail);
+    res.json({ thumbnail });
   } catch (err: any) {
     console.log(err);
     return res.status(500).json({ message: "Something went wrong" });
